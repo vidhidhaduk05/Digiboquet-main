@@ -468,18 +468,9 @@
         }
 
         function initMusic() {
-            const music = getMusicElement();
+            // Autoplay disabled
             const button = document.getElementById('music-toggle');
-
-            // Try to play automatically
-            music.play().then(() => {
-                button.textContent = 'Mute';
-                music.muted = false;
-            }).catch(error => {
-                // Autoplay was prevented
-                button.textContent = 'Play Music';
-                music.muted = false; // Ensure it's not muted when they do click play
-            });
+            button.textContent = 'Play Music';
         }
 
         function toggleMusic() {
@@ -502,18 +493,6 @@
 
         window.addEventListener('load', function () {
             initMusic();
-
-            // Allow music to start on first user interaction if blocked
-            document.body.addEventListener('click', function () {
-                const music = getMusicElement();
-                const button = document.getElementById('music-toggle');
-                if (music.paused) {
-                    music.play().then(() => {
-                        button.textContent = 'Mute';
-                        music.muted = false;
-                    }).catch(() => { });
-                }
-            }, { once: true });
         });
 
         // Flower Data

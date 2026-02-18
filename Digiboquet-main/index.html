@@ -345,7 +345,10 @@
                 left: 50%;
                 margin-left: -210px;
                 /* Half of 420px width */
-                margin-bottom: -120px;
+                margin-top: -50px;
+                /* Move bouquet UP */
+                margin-bottom: -160px;
+                /* Pull message UP */
             }
 
             .flower-options {
@@ -499,6 +502,18 @@
 
         window.addEventListener('load', function () {
             initMusic();
+
+            // Allow music to start on first user interaction if blocked
+            document.body.addEventListener('click', function () {
+                const music = getMusicElement();
+                const button = document.getElementById('music-toggle');
+                if (music.paused) {
+                    music.play().then(() => {
+                        button.textContent = 'Mute';
+                        music.muted = false;
+                    }).catch(() => { });
+                }
+            }, { once: true });
         });
 
         // Flower Data

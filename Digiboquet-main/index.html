@@ -335,6 +335,31 @@
             font-size: 14px;
             color: #666;
         }
+
+        @media (max-width: 450px) {
+            .bouquet {
+                transform: scale(0.75);
+                transform-origin: top center;
+                margin-bottom: -100px;
+                /* Compensate for scale shrinkage */
+            }
+
+            .flower-options {
+                gap: 10px;
+            }
+
+            .flower-btn img {
+                width: 90px;
+            }
+
+            h2 {
+                font-size: 20px;
+            }
+
+            .subtitle {
+                font-size: 16px;
+            }
+        }
     </style>
 </head>
 
@@ -379,6 +404,12 @@
     <!-- Message Writing Page -->
     <div id="write" class="page">
         <h2>Write the Card</h2>
+
+        <div style="margin-bottom: 15px;">
+            <input type="text" id="recipient-name" placeholder="Recipient's Name (Optional)"
+                style="padding: 8px; font-family: monospace; border: 2px solid #000; width: 200px; text-align: center;">
+        </div>
+
         <div class="decor-flowers">
             <div class="decor-left">
                 <img src="4.png" alt="Daisy">
@@ -414,7 +445,7 @@
 
     <!-- View Shared Bouquet Page -->
     <div id="view" class="page">
-        <h2>Your Bouquet</h2>
+        <h2 id="view-title">Your Bouquet</h2>
         <div id="view-bouquet" class="bouquet"></div>
 
         <div class="shared-message">
@@ -534,6 +565,7 @@
         let isBW = false;
         let flowerCounts = {};
         let message = '';
+        let recipientName = '';
         let arrangementIndex = 0;
         let greeneryIndex = 0;
         let customPositions = null; // stores user drag positions
@@ -633,6 +665,7 @@
         function goToWrite() { showPage('write'); }
         function goToFinal() {
             message = document.getElementById('message').value;
+            recipientName = document.getElementById('recipient-name').value.trim();
             showPage('final');
         }
         function goBack(prev) { showPage(prev); }
@@ -788,9 +821,19 @@
                 encodedMessage = btoa(message);
             }
 
+            let encodedName = '';
+            if (recipientName) {
+                try {
+                    encodedName = btoa(encodeURIComponent(recipientName));
+                } catch (e) {
+                    encodedName = btoa(recipientName);
+                }
+            }
+
             const paramData = {
                 f: selectedFlowers.join(','),
                 m: encodedMessage,
+                n: encodedName,
                 bw: isBW ? '1' : '0',
                 a: arrangementIndex,
                 g: greeneryIndex
@@ -826,11 +869,22 @@
                         }
                     });
 
+                    // Message parsing
                     const encodedMessage = params.get('m') || '';
                     try {
                         message = decodeURIComponent(atob(encodedMessage));
                     } catch (e) {
                         message = atob(encodedMessage) || '';
+                    }
+
+                    // Name parsing
+                    const encodedName = params.get('n') || '';
+                    if (encodedName) {
+                        try {
+                            recipientName = decodeURIComponent(atob(encodedName));
+                        } catch (e) {
+                            recipientName = atob(encodedName) || '';
+                        }
                     }
 
                     isBW = params.get('bw') === '1';
@@ -851,6 +905,14 @@
                     showPage('view');
 
                     updateBouquet('view-bouquet', false);
+
+                    // Update Title with Name
+                    const titleEl = document.getElementById('view-title');
+                    if (recipientName) {
+                        titleEl.textContent = `For ${recipientName}`;
+                    } else {
+                        titleEl.textContent = 'Your Bouquet';
+                    }
 
                     const messageContent = document.getElementById('shared-message-content');
                     if (messageContent) {

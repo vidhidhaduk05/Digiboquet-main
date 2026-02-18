@@ -150,6 +150,28 @@
             overflow: hidden;
         }
 
+        .bouquet.draggable .flower-in-bouquet {
+            cursor: grab;
+        }
+
+        .bouquet.draggable .flower-in-bouquet:active {
+            cursor: grabbing;
+            z-index: 10;
+        }
+
+        .bouquet.draggable .flower-in-bouquet.dragging {
+            opacity: 0.85;
+            z-index: 10;
+            filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
+        }
+
+        .drag-hint {
+            font-size: 14px;
+            color: #888;
+            margin: 8px 0 0;
+            font-style: italic;
+        }
+
         .greenery {
             position: absolute;
             bottom: 0;
@@ -329,32 +351,13 @@
         <button id="music-toggle" class="black-btn" onclick="toggleMusic()">Mute</button>
     </div> -->
 
-    <!-- Home Page with Instagram Link (ONLY HERE) -->
+    <!-- Home Page -->
     <div id="home" class="page">
-        <div class="logo-container">
-            <img class="logo-flower" src="13.png" alt="Logo Flower">
-            <div class="logo">Digibouquet</div>
-        </div>
-        <div class="subtitle">Beautiful Flowers Delivered Digitally</div>
-
         <button class="black-btn" onclick="startBuild(false)">Build a Bouquet</button>
-        <button class="white-btn" onclick="startBuild(true)">Build it in Black and White</button>
-
-        <p><a href="#garden" onclick="viewGarden()">View Garden</a></p>
-
-        <!-- Instagram Link - Only here, no footers elsewhere -->
-        <div class="instagram-link">
-            <a href="https://www.instagram.com/shah.i_prashant/" target="_blank">
-                <img src="https://cdn-icons-png.flaticon.com/512/2111/2111463.png" alt="Instagram">
-
-            </a>
-        </div>
-
     </div>
 
     <!-- Flower Selection Page -->
     <div id="pick" class="page">
-        <div class="logo">Digibouquet</div>
         <h2>PICK 6 TO 10 BLOOMS</h2>
         <p style="margin-bottom:30px; font-size:15px;">Click on a flower's name to deselect it.</p>
         <div class="flower-options" id="flower-options"></div>
@@ -364,18 +367,17 @@
 
     <!-- Bouquet Customization Page -->
     <div id="customize" class="page">
-        <div class="logo">Digibouquet</div>
         <h2>Customize Your Bouquet</h2>
         <button class="black-btn" onclick="newArrangement()">New Arrangement</button>
         <button class="white-btn" onclick="changeGreenery()">Change Greenery</button>
-        <div id="bouquet-preview" class="bouquet"></div>
+        <p class="drag-hint">✋ Drag flowers to rearrange them</p>
+        <div id="bouquet-preview" class="bouquet draggable"></div>
         <button class="white-btn" onclick="goBack('pick')">Back</button>
         <button class="black-btn" onclick="goToWrite()">Next</button>
     </div>
 
     <!-- Message Writing Page -->
     <div id="write" class="page">
-        <div class="logo">Digibouquet</div>
         <h2>Write the Card</h2>
         <div class="decor-flowers">
             <div class="decor-left">
@@ -397,7 +399,6 @@
 
     <!-- Final Bouquet Page -->
     <div id="final" class="page">
-        <div class="logo">Digibouquet</div>
         <div id="final-bouquet" class="bouquet"></div>
 
         <div class="final-message">
@@ -413,7 +414,6 @@
 
     <!-- View Shared Bouquet Page -->
     <div id="view" class="page">
-        <div class="logo">Digibouquet</div>
         <h2>Your Bouquet</h2>
         <div id="view-bouquet" class="bouquet"></div>
 
@@ -421,9 +421,6 @@
             <h3>Message for You:</h3>
             <div id="shared-message-content" class="shared-message-content"></div>
         </div>
-
-        <button class="black-btn" onclick="goToHomeAndBuild()">Build Your Own Bouquet</button>
-        <button class="white-btn" onclick="goToHome()">Home</button>
     </div>
 
     <script>
@@ -539,6 +536,7 @@
         let message = '';
         let arrangementIndex = 0;
         let greeneryIndex = 0;
+        let customPositions = null; // stores user drag positions
 
         // Flower Selection Functions
         function initFlowers() {
@@ -661,7 +659,13 @@
 
             const selected = getSelectedFlowers();
             const toShow = isMini ? selected.slice(0, 3) : selected;
-            const pos = arrangements[arrangementIndex].slice(0, toShow.length);
+            const basePos = arrangements[arrangementIndex].slice(0, toShow.length);
+            const isDraggable = containerId === 'bouquet-preview';
+
+            // Use custom positions if available, otherwise use base arrangement
+            const pos = (customPositions && customPositions.length === toShow.length)
+                ? customPositions
+                : basePos;
 
             toShow.forEach((fid, i) => {
                 const flower = flowers.find(f => f.id === fid);
@@ -676,6 +680,12 @@
                     div.style.left = `${pos[i].left}px`;
                     div.style.transform = `rotate(${pos[i].rot}deg)`;
 
+                    // Enable drag on customize page
+                    if (isDraggable) {
+                        div.dataset.index = i;
+                        enableDrag(div, container, i);
+                    }
+
                     container.appendChild(div);
                 }
             });
@@ -688,7 +698,72 @@
             }
         }
 
+        // Drag and Drop
+        function enableDrag(el, container, index) {
+            let isDragging = false;
+            let startX, startY, origTop, origLeft;
+
+            function onStart(e) {
+                e.preventDefault();
+                isDragging = true;
+                el.classList.add('dragging');
+                const point = e.touches ? e.touches[0] : e;
+                const rect = container.getBoundingClientRect();
+                startX = point.clientX;
+                startY = point.clientY;
+                origTop = parseInt(el.style.top);
+                origLeft = parseInt(el.style.left);
+                document.addEventListener('mousemove', onMove);
+                document.addEventListener('mouseup', onEnd);
+                document.addEventListener('touchmove', onMove, { passive: false });
+                document.addEventListener('touchend', onEnd);
+            }
+
+            function onMove(e) {
+                if (!isDragging) return;
+                e.preventDefault();
+                const point = e.touches ? e.touches[0] : e;
+                const dx = point.clientX - startX;
+                const dy = point.clientY - startY;
+                const newTop = origTop + dy;
+                const newLeft = origLeft + dx;
+                el.style.top = `${newTop}px`;
+                el.style.left = `${newLeft}px`;
+            }
+
+            function onEnd() {
+                if (!isDragging) return;
+                isDragging = false;
+                el.classList.remove('dragging');
+                document.removeEventListener('mousemove', onMove);
+                document.removeEventListener('mouseup', onEnd);
+                document.removeEventListener('touchmove', onMove);
+                document.removeEventListener('touchend', onEnd);
+                // Save custom position
+                saveCustomPositions();
+            }
+
+            el.addEventListener('mousedown', onStart);
+            el.addEventListener('touchstart', onStart, { passive: false });
+        }
+
+        function saveCustomPositions() {
+            const container = document.getElementById('bouquet-preview');
+            if (!container) return;
+            const flowerDivs = container.querySelectorAll('.flower-in-bouquet');
+            customPositions = [];
+            flowerDivs.forEach(div => {
+                const rot = div.style.transform.match(/rotate\((.+?)deg\)/);
+                customPositions.push({
+                    top: parseInt(div.style.top),
+                    left: parseInt(div.style.left),
+                    rot: rot ? parseFloat(rot[1]) : 0
+                });
+            });
+        }
+
         function newArrangement() {
+            customPositions = null; // reset custom positions
             arrangementIndex = (arrangementIndex + 1) % arrangements.length;
             updateBouquet('bouquet-preview');
         }
@@ -713,13 +788,20 @@
                 encodedMessage = btoa(message);
             }
 
-            const params = new URLSearchParams({
+            const paramData = {
                 f: selectedFlowers.join(','),
                 m: encodedMessage,
                 bw: isBW ? '1' : '0',
                 a: arrangementIndex,
                 g: greeneryIndex
-            });
+            };
+
+            // Include custom drag positions if user rearranged flowers
+            if (customPositions && customPositions.length > 0) {
+                paramData.cp = btoa(JSON.stringify(customPositions));
+            }
+
+            const params = new URLSearchParams(paramData);
 
             const baseUrl = 'https://vidhidhaduk05.github.io/Digiboquet-main/Digiboquet-main/index.html';
             const link = `${baseUrl}?${params.toString()}`;
@@ -754,6 +836,15 @@
                     isBW = params.get('bw') === '1';
                     arrangementIndex = parseInt(params.get('a') || '0');
                     greeneryIndex = parseInt(params.get('g') || '0');
+
+                    // Restore custom drag positions if present
+                    if (params.has('cp')) {
+                        try {
+                            customPositions = JSON.parse(atob(params.get('cp')));
+                        } catch (e) {
+                            customPositions = null;
+                        }
+                    }
 
                     document.body.classList.toggle('bw', isBW);
 

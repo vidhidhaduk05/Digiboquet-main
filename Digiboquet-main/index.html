@@ -340,8 +340,12 @@
             .bouquet {
                 transform: scale(0.75);
                 transform-origin: top center;
-                margin-bottom: -100px;
-                /* Compensate for scale shrinkage */
+                /* Force perfect centering relative to viewport */
+                position: relative;
+                left: 50%;
+                margin-left: -210px;
+                /* Half of 420px width */
+                margin-bottom: -120px;
             }
 
             .flower-options {
@@ -909,7 +913,7 @@
                     // Update Title with Name
                     const titleEl = document.getElementById('view-title');
                     if (recipientName) {
-                        titleEl.textContent = `For ${recipientName}`;
+                        titleEl.textContent = recipientName;
                     } else {
                         titleEl.textContent = 'Your Bouquet';
                     }

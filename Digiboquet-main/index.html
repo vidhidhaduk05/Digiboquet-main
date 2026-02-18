@@ -369,16 +369,16 @@
 
 <body>
 
-    <!-- Background Music
-    <audio id="bg-music" autoplay loop>
-        <source src="audio/snaptik_7568051171114405128_v3.mp3" type="audio/mpeg">
+    <!-- Background Music -->
+    <audio id="bg-music" loop>
+        <source src="music.mp3" type="audio/mpeg">
     </audio>
-    
-    Music Player -->
-    <!-- <div class="music-player">
+
+    <!-- Music Player -->
+    <div class="music-player">
         <span>🎵</span>
-        <button id="music-toggle" class="black-btn" onclick="toggleMusic()">Mute</button>
-    </div> -->
+        <button id="music-toggle" class="black-btn" onclick="toggleMusic()">Play Music</button>
+    </div>
 
     <!-- Home Page -->
     <div id="home" class="page">
@@ -466,8 +466,16 @@
 
         function initMusic() {
             const music = getMusicElement();
-            music.play().catch(error => {
-                document.getElementById('music-toggle').textContent = 'Unmute';
+            const button = document.getElementById('music-toggle');
+
+            // Try to play automatically
+            music.play().then(() => {
+                button.textContent = 'Mute';
+                music.muted = false;
+            }).catch(error => {
+                // Autoplay was prevented
+                button.textContent = 'Play Music';
+                music.muted = false; // Ensure it's not muted when they do click play
             });
         }
 
@@ -475,13 +483,17 @@
             const music = getMusicElement();
             const button = document.getElementById('music-toggle');
 
-            if (music.muted) {
-                music.muted = false;
-                button.textContent = 'Mute';
+            if (music.paused) {
                 music.play();
+                button.textContent = 'Mute';
             } else {
-                music.muted = true;
-                button.textContent = 'Unmute';
+                if (music.muted) {
+                    music.muted = false;
+                    button.textContent = 'Mute';
+                } else {
+                    music.muted = true;
+                    button.textContent = 'Unmute';
+                }
             }
         }
 
